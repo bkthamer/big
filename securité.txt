@@ -529,7 +529,7 @@ if __name__ == "__main__":
 ****************************************************************************
  
  
- 
+from pyspark.sql.functions import regexp_replace
 
-
+df = df.withColumn("colonne",regexp_replace(col("colonne"),"UTC",""))
 
