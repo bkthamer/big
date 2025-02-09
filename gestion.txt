@@ -1,0 +1,131 @@
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import when,col,current_date
+from pyspark.sql import functions as F
+
+spark = SparkSession.builder \
+    .appName("hhh") \
+    .getOrCreate()
+
+
+
+url = "/home/ubuntu/Downloads/openfood.csv"
+
+df = spark.read.option("delimiter","\t").csv(url,header=True,inferSchema=True)
+
+#df_cleaned = dfc.withColumn("timezones", regexp_replace(col("timezones"), "UTC", ""))
+
+
+df = df.withColumn("brand_category", 
+                  when(df.brands == "Chocolate", "Premium")
+                  .when(df.brands == "Javvy", "Second")
+                  .otherwise("Autre"))
+
+df = df.withColumn("date_date", current_date())
+
+
+df.select(col("brand_category")).show()
+
+
+df.select(col("date_date")).show()
+
+
+
+
+df.printSchema()
+
+df_filtred = df.filter(df["caffeine_100g"] > 50.0)
+df_filtred.select(col("caffeine_100g")).show()
+
+df_ordred = df.orderBy(col("code"))
+df_ordred.select(col("code")).show()
+
+
+df_groupby = df.groupBy("brands").agg(F.avg("code").alias("moyenne")).show()
+
+df.createOrReplaceTempView("table")
+
+spark.sql("select code , brands , dense_rank() over (partition by brands order by code) as rank from table").show()
+
+spark.sql("select code , brands from table group by code,brands order by code").show()
+
+spark.sql("select MIN(code) from table").show()
+
+spark.sql("select code from table limit 3 ").show()
+
+spark.sql("select code , brands from table where code == (select min(code) from table )").show()
+spark.sql("select code , brands from table where code > (select avg(code) from table)").show()
+
+
+
+
+spark.stop()
+
+****************************************************************
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col  , row_number
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+
+
+spark = SparkSession.builder \
+    .appName("hello") \
+    .getOrCreate()
+
+
+url_loc = "/home/ubuntu/Downloads/archive/fifa.csv"
+
+url_hdfs = "hdfs://localhost:9000/rev/thamer.csv"
+
+
+df = spark.read.csv(url_loc,header=True,inferSchema=True)
+
+df.printSchema()
+
+df.write.mode("overwrite").csv(url_hdfs,header=True)
+
+
+df.show(10)
+
+df_filtred = df.filter(df["age"] > 28)
+
+df_filtred.select(col("age")).show()
+
+df_ordred = df_filtred.orderBy("age")
+df_ordred.select(col("age"),col("name")).show()
+
+df_grouped = df.groupBy("age").agg(F.avg("Overall").alias("moyenne"))
+df_grouped.show()
+
+df.createOrReplaceTempView("table")
+
+spark.sql("select Name , Overall , dense_rank() over(partition by age order by Overall) as somme from table ").show()
+
+spark.sql("select name , explode(split(photo,'/')) as ss from table").show()
+
+spark.sql("select name , Overall from table where Overall == (select MAX(Overall) from table) limit 3").show()
+
+spark.sql("select Overall , name as nbr from table where Overall == (select min(Overall) from table)").show()
+
+spark.sql("select name ,Overall from table where Overall > (select AVG(Overall) from table)").show()
+
+window_spec = Window.orderBy("Overall")
+
+df_with_rank = df.withColumn("rank",row_number().over(window_spec))
+
+df_with_rank.select("rank","name").show()
+
+spark.stop()
+
+
+built-in function
+
+COUNT()
+SUM()	
+AVG()	
+MIN()	
+MAX()
+
+df = df.repartition(200)  # Redistribue uniformément les données
+df.cache()
+
+df.repartition(7, "age").write ....
